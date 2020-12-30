@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+   <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Vue Boolflix</title>
+      <link rel="preconnect" href="https://fonts.gstatic.com">
+      <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+      <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA==" crossorigin="anonymous" />
+      <script src="https://unpkg.com/dayjs@1.8.21/dayjs.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.0/axios.min.js" integrity="sha512-DZqqY3PiOvTP9HkjIWgjO6ouCbq+dxqWoJZ/Q+zPYNHmlnI2dQnbJ5bxAHpAMw+LXRm4D72EIRXzvcHQtE8/VQ==" crossorigin="anonymous"></script>
+      <link rel="stylesheet" href="css/style.css">
+   </head>
+   <body>
+      <div id="app">
+         <header>
+            <h1>BOOLFLIX</h1>
+            <ul id="menu">
+               <li><a @click="showAll" :class="{active: isHome}" href="#">Home</a></li>
+               <li><a @click="showOnlyTvs" :class="{active: isTv}" href="#">Serie Tv</a></li>
+               <li><a @click="showOnlyMovies" :class="{active: isMovie}" href="#">Film</a></li>
+            </ul>
+
+            <select v-model="selectedGenre">
+               <option value="all">All</option>
+               <option
+               v-for="(item, index) in genreNames"
+               :value="genreIds[index]">{{item}}</option>
+           </select>
+
+
+            <div id="search-bar" :class="inputBarStyle">
+               <i id="search-icon" class="fas fa-search" @click="toggleInput"></i>
+               <input id="search-input"
+                 :class="inputStyle"
+                 v-show="showSearchInput"
+                 v-model="query"
+                 @keyup.enter="search"
+                 type="text"
+                 placeholder="Cerca...">
+            </div>
+         </header>
+         <main>
+            <div v-show="showMovies">
+               <h1 class="title">Film</h1>
+               <div class="cards-container">
+                  <div
+                  v-for="movie in selectedMovies"
+                  class="card"
+                  v-show="checkGenre(movie.genre_ids)">
+                     <div v-if="movie.poster_path != null">
+                        <img :src="posterUrl + movie.poster_path" alt="movie.title">
+                     </div>
+                     <div v-else class="img-placeholder">
+                        <h1>BOOLFLIX</h1>
+                     </div>
+                     <div class="card-info">
+                        <ul class="card-list">
+
+                           <li><span class="info">Titolo:</span> {{ movie.title}} </li>
+                           <li><span class="info">Titolo originale:</span> {{ movie.original_title}} </li>
+                           <li><span class="info">Lingua:</span> {{ movie.original_language}} </li>
+                           <li>
+                              <span class="info">Voto:</span>
+                              <i v-for="star in Math.ceil(movie.vote_average / 2)" class="fas fa-star star-full"></i>
+                              <i v-for="star in 5 - Math.ceil(movie.vote_average / 2)" class="fas fa-star star-empty"></i>
+                           </li>
+                           <li><span class="info">Descrizione:</span> {{ movie.overview}} </li>
+                           <li v-if="movie.genre_ids.length != 0">
+                              <span class="info">Generi:</span>
+                              <span v-for="id in movie.genre_ids.slice(0,movie.genre_ids.length - 1)">{{ getGenre(id) }}, </span>
+                              <span v-for="id in movie.genre_ids.slice(movie.genre_ids.length - 1,movie.genre_ids.length)">{{ getGenre(id) }} </span>
+                           </li>
+                           <li v-else>
+                              <span class="info">Generi:</span>
+                              <span>Genere non specificato</span>
+                           </li>
+                           <li v-if="movie.cast.length != 0">
+                              <span class="info">Cast:</span> {{ movie.cast }}
+                           </li>
+                           <li v-else>
+                              <span class="info">Generi:</span>
+                              <span>Cast non specificato</span>
+                           </li>
+                        </ul>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div v-show="showTvs">
+               <h1 class="title">Serie</h1>
+               <div class="cards-container">
+                  <div class="card" v-for="tv in selectedTv">
+                     <div v-if="tv.poster_path != null">
+                        <img :src="posterUrl + tv.poster_path" alt="tv.title">
+                     </div>
+                     <div v-else class="img-placeholder">
+                        <h1>BOOLFLIX</h1>
+                     </div>
+                     <div class="card-info">
+                        <ul class="card-list">
+                           <li><span class="info">Titolo:</span> {{ tv.name }} </li>
+                           <li><span class="info">Titolo originale:</span> {{ tv.original_title}} </li>
+                           <li><span class="info">Lingua:</span> {{ tv.original_language}} </li>
+                           <li>
+                              <span class="info">Voto:</span>
+                              <i v-for="star in Math.ceil(tv.vote_average / 2)" class="fas fa-star star-full"></i>
+                              <i v-for="star in 5 - Math.ceil(tv.vote_average / 2)" class="fas fa-star star-empty"></i>
+                           </li>
+                           <li><span class="info">Descrizione:</span> {{ tv.overview}} </li>
+                           <li v-if="tv.genre_ids.length != 0">
+                              <span class="info">Generi:</span>
+                              <span v-for="id in tv.genre_ids.slice(0,tv.genre_ids.length - 1)">{{ getGenre(id) }}, </span>
+                              <span v-for="id in tv.genre_ids.slice(tv.genre_ids.length - 1,tv.genre_ids.length)">{{ getGenre(id) }} </span>
+                           </li>
+                           <li v-else>
+                              <span class="info">Generi:</span>
+                              <span>Genere non specificato</span>
+                           </li>
+                           <li v-if="tv.cast.length != 0">
+                              <span class="info">Cast:</span> {{ tv.cast }}
+                           </li>
+                           <li v-else>
+                              <span class="info">Generi:</span>
+                              <span>Cast non specificato</span>
+                           </li>
+                        </ul>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </main>
+      </div>
+   <script src="js/main.js" charset="utf-8"></script>
+   </body>
+</html>
